@@ -6,7 +6,16 @@ import Role from './Role'
 import Contact from './Contact'
 import Route from './Route'
 import RouteRun from './RouteRun'
+import SoftDeletes from './Traits/SoftDeletes'
 export default class User extends BaseModel {
+  public static boot() {
+      if ((this as any).booted) {
+        return
+      }
+      super.boot()
+      SoftDeletes(this)
+    }
+    
   @column({ isPrimary: true })
   public id: number
 
@@ -42,6 +51,9 @@ export default class User extends BaseModel {
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   public updatedAt: DateTime
+
+  @column.dateTime({ columnName: 'deleted_at' })
+  public deletedAt: DateTime | null
 
   @beforeSave()
   public static async hashPassword (user: User) {

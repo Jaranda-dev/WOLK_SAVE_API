@@ -8,7 +8,7 @@ export default class UsersController {
   // Obtener todos los usuarios
 public async index({ response, auth }: HttpContextContract) {
   try {
-    const user = auth.user
+    const user = auth.use('api').user
 
     if (!user) {
       return response.status(401).json({
@@ -103,7 +103,7 @@ public async index({ response, auth }: HttpContextContract) {
 
 // Actualizar un usuario
 public async update({ params, request, response, auth }: HttpContextContract) {
-  const userAuth = auth.user
+  const userAuth = auth.use('api').user
 
   try {
 
@@ -152,7 +152,7 @@ public async update({ params, request, response, auth }: HttpContextContract) {
 
 // Eliminar un usuario
 public async destroy({ params, response, auth }: HttpContextContract) {
-  const userAuth = auth.user
+  const userAuth = auth.use('api').user
 
   try {
     if (!userAuth) {

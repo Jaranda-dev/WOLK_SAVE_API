@@ -3,8 +3,17 @@ import { BaseModel, column, belongsTo, BelongsTo, hasMany, HasMany } from '@ioc:
 import User from './User'
 import Route from './Route'
 import Incident from './Incident'
+import SoftDeletes from './Traits/SoftDeletes'
 
 export default class RouteRun extends BaseModel {
+  public static boot() {
+      if ((this as any).booted) {
+        return
+      }
+      super.boot()
+      SoftDeletes(this)
+    }
+    
   @column({ isPrimary: true })
   public id: number
 
@@ -34,4 +43,7 @@ export default class RouteRun extends BaseModel {
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   public updatedAt: DateTime
+
+  @column.dateTime({ columnName: 'deleted_at' })
+  public deletedAt: DateTime | null
 }

@@ -8,3 +8,4 @@ Route.group(() => {
   Route.delete('/:id', 'UsersController.destroy')
 })
 .prefix('users')
+.middleware(['auth'])
