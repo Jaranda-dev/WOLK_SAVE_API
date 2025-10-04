@@ -10,4 +10,5 @@ Route.group(() => {
   require('App/Routes/RouteRoutes')
   require('App/Routes/RouteRunRoutes')
   require('App/Routes/UserRoutes')
+  require('App/Routes/AuthRoutes')
 }).prefix('/api/v1')
