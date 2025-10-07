@@ -2,203 +2,124 @@ import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import User from 'App/Models/User'
 import CreateUserValidator from 'App/Validators/Users/CreateUserValidator'
 import UpdateUserValidator from 'App/Validators/Users/UpdateUserValidator'
-
+import { jsonResponse } from 'App/Helpers/ResponseHelper'
+import { getUser, isAdminOrMonitor } from 'App/Helpers/AuthHelper'
 
 export default class UsersController {
-  // Obtener todos los usuarios
-public async index({ response, auth }: HttpContextContract) {
-  try {
-    const user = auth.use('api').user
-
-    if (!user) {
-      return response.status(401).json({
-        data: null,
-        msg: 'No autenticado',
-        status: 'failed',
-      })
-    }
-
-    // si es administrador
-    if (user.roleId === 1) {
-      const users = await User.query()
-        .preload('role')
-        .preload('contacts')
-        .preload('routes')
-        .preload('routeRuns')
-        .whereNot('id', user.id)
-
-      return response.status(200).json({
-        data: users,
-        msg: 'Usuarios obtenidos exitosamente',
-        status: 'success',
-      })
-    }
-
-    // si no es admin, solo devuelve su propio usuario
-    const singleUser = await User.query()
-      .where('id', user.id)
+  // Consulta base con preloads
+  private baseQuery() {
+    return User.query()
       .preload('role')
       .preload('contacts')
       .preload('routes')
       .preload('routeRuns')
-      .firstOrFail()
-
-    return response.status(200).json({
-      data: singleUser,
-      msg: 'Usuario obtenido exitosamente',
-      status: 'success',
-    })
-  } catch (e) {
-    return response.status(500).json({
-      data: null,
-      msg: e.message || 'Error al obtener usuarios',
-      status: 'failed',
-    })
   }
-}
 
+  // Obtener todos los usuarios
+  public async index({ response, auth }: HttpContextContract) {
+    try {
+      const userAuth = await getUser(auth)
+
+      if (isAdminOrMonitor(userAuth)) {
+        const users = await this.baseQuery()
+          .whereNot('id', userAuth.id)
+        return jsonResponse(response, 200, users, 'Usuarios obtenidos exitosamente')
+      }
+
+      const singleUser = await this.baseQuery()
+        .where('id', userAuth.id)
+        .firstOrFail()
+
+      return jsonResponse(response, 200, singleUser, 'Usuario obtenido exitosamente')
+    } catch (e: any) {
+      const status = e.name === 'AuthenticationException' ? 401 : 500
+      return jsonResponse(response, status, null, e.message || 'Error al obtener usuarios', false)
+    }
+  }
 
   // Crear un nuevo usuario
   public async store({ request, response }: HttpContextContract) {
     try {
       const data = await request.validate(CreateUserValidator)
       const user = await User.create(data)
-      return response.status(201).json({
-        data: user,
-        msg: 'Usuario creado exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al crear usuario',
-        status: 'failed',
-      })
+      return jsonResponse(response, 201, user, 'Usuario creado exitosamente')
+    } catch (e: any) {
+      if (e.messages) return jsonResponse(response, 422, null, e.messages, false)
+      return jsonResponse(response, 400, null, e.message || 'Error al crear usuario', false)
     }
   }
 
   // Mostrar un usuario específico
-  public async show({ params, response }: HttpContextContract) {
+  public async show({ params, response, auth }: HttpContextContract) {
     try {
-      const user = await User.query()
-        .where('id', params.id)
-        .preload('role')
-        .preload('contacts')
-        .preload('routes')
-        .preload('routeRuns')
-        .firstOrFail()
-      return response.status(200).json({
-        data: user,
-        msg: 'Usuario obtenido exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Usuario no encontrado',
-        status: 'failed',
-      })
+      const userAuth = await getUser(auth)
+      const query = this.baseQuery().where('id', params.id)
+
+      if (!isAdminOrMonitor(userAuth) && Number(params.id) !== userAuth.id) {
+        return jsonResponse(response, 403, null, 'No tienes permisos para ver este usuario', false)
+      }
+
+      const user = await query.firstOrFail()
+      return jsonResponse(response, 200, user, 'Usuario obtenido exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Usuario no encontrado', false)
     }
   }
 
-// Actualizar un usuario
-public async update({ params, request, response, auth }: HttpContextContract) {
-  const userAuth = auth.use('api').user
+  // Actualizar un usuario
+  public async update({ params, request, response, auth }: HttpContextContract) {
+    try {
+      const userAuth = await getUser(auth)
+      const data = await request.validate(UpdateUserValidator)
 
-  try {
+      const userToUpdate = isAdminOrMonitor(userAuth)
+        ? await User.findOrFail(params.id)
+        : await User.findOrFail(userAuth.id)
 
-    const data = await request.validate(UpdateUserValidator)
+      userToUpdate.merge(data)
+      await userToUpdate.save()
 
-    if (!userAuth) {
-      return response.status(401).json({
-        data: null,
-        msg: 'No autenticado',
-        status: 'failed',
-      })
+      return jsonResponse(
+        response,
+        200,
+        userToUpdate,
+        isAdminOrMonitor(userAuth)
+          ? 'Usuario actualizado exitosamente'
+          : 'Tu perfil fue actualizado exitosamente'
+      )
+    } catch (e: any) {
+      if (e.messages) return jsonResponse(response, 422, null, e.messages, false)
+      return jsonResponse(response, 400, null, e.message || 'Error al actualizar usuario', false)
     }
-
-    // Si es admin -> puede actualizar a cualquiera
-    if (userAuth.roleId === 1) {
-      const user = await User.findOrFail(params.id)
-      user.merge(data)
-      await user.save()
-
-      return response.status(200).json({
-        data: user,
-        msg: 'Usuario actualizado exitosamente',
-        status: 'success',
-      })
-    }
-
-    // Si NO es admin -> solo puede actualizarse a sí mismo
-    const user = await User.findByOrFail('id', userAuth.id)
-    user.merge(data)
-    await user.save()
-
-    return response.status(200).json({
-      data: user,
-      msg: 'Tu perfil fue actualizado exitosamente',
-      status: 'success',
-    })
-  } catch (e) {
-    return response.status(400).json({
-      data: null,
-      msg: e.messages || e.message || 'Error al actualizar usuario',
-      status: 'failed',
-    })
   }
-}
 
+  // Eliminar un usuario
+  public async destroy({ params, response, auth }: HttpContextContract) {
+    try {
+      const userAuth = await getUser(auth)
 
-// Eliminar un usuario
-public async destroy({ params, response, auth }: HttpContextContract) {
-  const userAuth = auth.use('api').user
+      const userToDelete = isAdminOrMonitor(userAuth)
+        ? await User.findOrFail(params.id)
+        : Number(params.id) === userAuth.id
+          ? await User.findOrFail(userAuth.id)
+          : null
 
-  try {
-    if (!userAuth) {
-      return response.status(401).json({
-        data: null,
-        msg: 'No autenticado',
-        status: 'failed',
-      })
+      if (!userToDelete) {
+        return jsonResponse(response, 403, null, 'No tienes permisos para eliminar este usuario', false)
+      }
+
+      await userToDelete.delete()
+
+      return jsonResponse(
+        response,
+        200,
+        null,
+        isAdminOrMonitor(userAuth)
+          ? 'Usuario eliminado exitosamente'
+          : 'Tu cuenta ha sido eliminada correctamente'
+      )
+    } catch {
+      return jsonResponse(response, 404, null, 'Usuario no encontrado', false)
     }
-
-    // Si es admin puede eliminar a cualquiera
-    if (userAuth.roleId === 1) {
-      const user = await User.findOrFail(params.id)
-      await user.delete()
-      return response.status(200).json({
-        data: null,
-        msg: 'Usuario eliminado exitosamente',
-        status: 'success',
-      })
-    }
-
-    // Si no es admin, solo puede eliminar su propia cuenta
-    if (userAuth.id !== Number(params.id)) {
-      return response.status(403).json({
-        data: null,
-        msg: 'No tienes permisos para eliminar este usuario',
-        status: 'failed',
-      })
-    }
-
-    const user = await User.findOrFail(userAuth.id)
-    await user.delete()
-
-    return response.status(200).json({
-      data: null,
-      msg: 'Tu cuenta ha sido eliminada correctamente',
-      status: 'success',
-    })
-  } catch (e) {
-    return response.status(404).json({
-      data: null,
-      msg: 'Usuario no encontrado',
-      status: 'failed',
-    })
   }
-}
-
-
 }

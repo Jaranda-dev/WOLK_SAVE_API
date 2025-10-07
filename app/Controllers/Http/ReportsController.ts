@@ -2,6 +2,7 @@ import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Report from 'App/Models/Report'
 import CreateReportValidator from 'App/Validators/Reports/CreateReportValidator'
 import UpdateReportValidator from 'App/Validators/Reports/UpdateReportValidator'
+import { jsonResponse } from 'App/Helpers/ResponseHelper'
 
 export default class ReportsController {
   // Obtener todos los reportes
@@ -10,17 +11,9 @@ export default class ReportsController {
       const reports = await Report.query()
         .preload('incident')
         .preload('evidences')
-      return response.status(200).json({
-        data: reports,
-        msg: 'Reportes obtenidos exitosamente',
-        status: 'success',
-      })
+      return jsonResponse(response, 200, reports, 'Reportes obtenidos exitosamente')
     } catch (e) {
-      return response.status(500).json({
-        data: null,
-        msg: e.message || 'Error al obtener reportes',
-        status: 'failed',
-      })
+      return jsonResponse(response, 500, null, e.message || 'Error al obtener reportes', false)
     }
   }
 
@@ -29,17 +22,13 @@ export default class ReportsController {
     try {
       const data = await request.validate(CreateReportValidator)
       const report = await Report.create(data)
-      return response.status(201).json({
-        data: report,
-        msg: 'Reporte creado exitosamente',
-        status: 'success',
-      })
+      return jsonResponse(response, 201, report, 'Reporte creado exitosamente')
     } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al crear reporte',
-        status: 'failed',
-      })
+      if (e.messages) {
+        return jsonResponse(response, 422, null, e.messages, false)
+      }
+
+      return jsonResponse(response, 400, null, e.message || 'Error al crear reporte', false)
     }
   }
 
@@ -51,17 +40,10 @@ export default class ReportsController {
         .preload('incident')
         .preload('evidences')
         .firstOrFail()
-      return response.status(200).json({
-        data: report,
-        msg: 'Reporte obtenido exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Reporte no encontrado',
-        status: 'failed',
-      })
+
+      return jsonResponse(response, 200, report, 'Reporte obtenido exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Reporte no encontrado', false)
     }
   }
 
@@ -72,17 +54,14 @@ export default class ReportsController {
       const report = await Report.findOrFail(params.id)
       report.merge(data)
       await report.save()
-      return response.status(200).json({
-        data: report,
-        msg: 'Reporte actualizado exitosamente',
-        status: 'success',
-      })
+
+      return jsonResponse(response, 200, report, 'Reporte actualizado exitosamente')
     } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al actualizar reporte',
-        status: 'failed',
-      })
+      if (e.messages) {
+        return jsonResponse(response, 422, null, e.messages, false)
+      }
+
+      return jsonResponse(response, 400, null, e.message || 'Error al actualizar reporte', false)
     }
   }
 
@@ -91,17 +70,9 @@ export default class ReportsController {
     try {
       const report = await Report.findOrFail(params.id)
       await report.delete()
-      return response.status(200).json({
-        data: null,
-        msg: 'Reporte eliminado exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Reporte no encontrado',
-        status: 'failed',
-      })
+      return jsonResponse(response, 200, null, 'Reporte eliminado exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Reporte no encontrado', false)
     }
   }
 }

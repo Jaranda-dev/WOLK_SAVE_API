@@ -2,6 +2,7 @@ import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Place from 'App/Models/Place'
 import CreatePlaceValidator from 'App/Validators/Places/CreatePlaceValidator'
 import UpdatePlaceValidator from 'App/Validators/Places/UpdatePlaceValidator'
+import { jsonResponse } from 'App/Helpers/ResponseHelper'
 
 export default class PlacesController {
   // Obtener todos los lugares
@@ -11,17 +12,10 @@ export default class PlacesController {
         .preload('incidents')
         .preload('startRoutes')
         .preload('endRoutes')
-      return response.status(200).json({
-        data: places,
-        msg: 'Lugares obtenidos exitosamente',
-        status: 'success',
-      })
+
+      return jsonResponse(response, 200, places, 'Lugares obtenidos exitosamente')
     } catch (e) {
-      return response.status(500).json({
-        data: null,
-        msg: e.message || 'Error al obtener lugares',
-        status: 'failed',
-      })
+      return jsonResponse(response, 500, null, e.message || 'Error al obtener lugares', false)
     }
   }
 
@@ -30,17 +24,11 @@ export default class PlacesController {
     try {
       const data = await request.validate(CreatePlaceValidator)
       const place = await Place.create(data)
-      return response.status(201).json({
-        data: place,
-        msg: 'Lugar creado exitosamente',
-        status: 'success',
-      })
+
+      return jsonResponse(response, 201, place, 'Lugar creado exitosamente')
     } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al crear lugar',
-        status: 'failed',
-      })
+      const msg = e.messages || e.message || 'Error al crear lugar'
+      return jsonResponse(response, 400, null, msg, false)
     }
   }
 
@@ -53,17 +41,10 @@ export default class PlacesController {
         .preload('startRoutes')
         .preload('endRoutes')
         .firstOrFail()
-      return response.status(200).json({
-        data: place,
-        msg: 'Lugar obtenido exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Lugar no encontrado',
-        status: 'failed',
-      })
+
+      return jsonResponse(response, 200, place, 'Lugar obtenido exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Lugar no encontrado', false)
     }
   }
 
@@ -74,17 +55,11 @@ export default class PlacesController {
       const place = await Place.findOrFail(params.id)
       place.merge(data)
       await place.save()
-      return response.status(200).json({
-        data: place,
-        msg: 'Lugar actualizado exitosamente',
-        status: 'success',
-      })
+
+      return jsonResponse(response, 200, place, 'Lugar actualizado exitosamente')
     } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al actualizar lugar',
-        status: 'failed',
-      })
+      const msg = e.messages || e.message || 'Error al actualizar lugar'
+      return jsonResponse(response, 400, null, msg, false)
     }
   }
 
@@ -93,17 +68,10 @@ export default class PlacesController {
     try {
       const place = await Place.findOrFail(params.id)
       await place.delete()
-      return response.status(200).json({
-        data: null,
-        msg: 'Lugar eliminado exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Lugar no encontrado',
-        status: 'failed',
-      })
+
+      return jsonResponse(response, 200, null, 'Lugar eliminado exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Lugar no encontrado', false)
     }
   }
 }

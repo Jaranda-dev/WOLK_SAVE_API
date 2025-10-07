@@ -2,108 +2,100 @@ import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import RouteRun from 'App/Models/RouteRun'
 import CreateRouteRunValidator from 'App/Validators/RouteRuns/CreateRouteRunValidator'
 import UpdateRouteRunValidator from 'App/Validators/RouteRuns/UpdateRouteRunValidator'
+import { jsonResponse } from 'App/Helpers/ResponseHelper'
+import { getUser, isAdminOrMonitor } from 'App/Helpers/AuthHelper'
 
 export default class RouteRunsController {
-  // Obtener todos los RouteRuns
-  public async index({ response }: HttpContextContract) {
+  // Consulta base con preloads
+  private baseQuery() {
+    return RouteRun.query()
+      .preload('route')
+      .preload('user')
+      .preload('incidents')
+  }
+
+  // Obtener todos los recorridos
+  public async index({ response, auth }: HttpContextContract) {
     try {
-      const runs = await RouteRun.query()
-        .preload('route')
-        .preload('user')
-        .preload('incidents')
-      return response.status(200).json({
-        data: runs,
-        msg: 'Recorridos obtenidos exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(500).json({
-        data: null,
-        msg: e.message || 'Error al obtener recorridos',
-        status: 'failed',
-      })
+      const user = await getUser(auth)
+      const query = this.baseQuery()
+
+      // Si no es admin o monitoreador, filtrar solo sus recorridos
+      if (!isAdminOrMonitor(user)) query.where('user_id', user.id)
+
+      const runs = await query
+      return jsonResponse(response, 200, runs, 'Recorridos obtenidos exitosamente')
+    } catch (e: any) {
+      const status = e.name === 'AuthenticationException' ? 401 : 500
+      return jsonResponse(response, status, null, e.message || 'Error al obtener recorridos', false)
     }
   }
 
-  // Crear un nuevo RouteRun
-  public async store({ request, response }: HttpContextContract) {
+  // Crear un nuevo recorrido
+  public async store({ request, response, auth }: HttpContextContract) {
     try {
+      const user = await getUser(auth)
       const data = await request.validate(CreateRouteRunValidator)
+
+      // Si no es admin o monitoreador, asignar usuario
+      if (!isAdminOrMonitor(user)) data.userId = user.id
+
       const run = await RouteRun.create(data)
-      return response.status(201).json({
-        data: run,
-        msg: 'Recorrido creado exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al crear recorrido',
-        status: 'failed',
-      })
+      return jsonResponse(response, 201, run, 'Recorrido creado exitosamente')
+    } catch (e: any) {
+      if (e.messages) return jsonResponse(response, 422, null, e.messages, false)
+      return jsonResponse(response, 400, null, e.message || 'Error al crear recorrido', false)
     }
   }
 
-  // Mostrar un RouteRun específico
-  public async show({ params, response }: HttpContextContract) {
+  // Mostrar un recorrido específico
+  public async show({ params, response, auth }: HttpContextContract) {
     try {
-      const run = await RouteRun.query()
-        .where('id', params.id)
-        .preload('route')
-        .preload('user')
-        .preload('incidents')
-        .firstOrFail()
-      return response.status(200).json({
-        data: run,
-        msg: 'Recorrido obtenido exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Recorrido no encontrado',
-        status: 'failed',
-      })
+      const user = await getUser(auth)
+      const query = this.baseQuery().where('id', params.id)
+
+      if (!isAdminOrMonitor(user)) query.where('user_id', user.id)
+
+      const run = await query.firstOrFail()
+      return jsonResponse(response, 200, run, 'Recorrido obtenido exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Recorrido no encontrado', false)
     }
   }
 
-  // Actualizar un RouteRun
-  public async update({ params, request, response }: HttpContextContract) {
+  // Actualizar un recorrido
+  public async update({ params, request, response, auth }: HttpContextContract) {
     try {
+      const user = await getUser(auth)
       const data = await request.validate(UpdateRouteRunValidator)
-      const run = await RouteRun.findOrFail(params.id)
+
+      const query = RouteRun.query().where('id', params.id)
+      if (!isAdminOrMonitor(user)) query.where('user_id', user.id)
+
+      const run = await query.firstOrFail()
       run.merge(data)
       await run.save()
-      return response.status(200).json({
-        data: run,
-        msg: 'Recorrido actualizado exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al actualizar recorrido',
-        status: 'failed',
-      })
+
+      return jsonResponse(response, 200, run, 'Recorrido actualizado exitosamente')
+    } catch (e: any) {
+      if (e.messages) return jsonResponse(response, 422, null, e.messages, false)
+      return jsonResponse(response, 400, null, e.message || 'Error al actualizar recorrido', false)
     }
   }
 
-  // Eliminar un RouteRun
-  public async destroy({ params, response }: HttpContextContract) {
+  // Eliminar un recorrido
+  public async destroy({ params, response, auth }: HttpContextContract) {
     try {
-      const run = await RouteRun.findOrFail(params.id)
+      const user = await getUser(auth)
+      const query = RouteRun.query().where('id', params.id)
+      if (!isAdminOrMonitor(user)) query.where('user_id', user.id)
+
+      const run = await query.firstOrFail()
       await run.delete()
-      return response.status(200).json({
-        data: null,
-        msg: 'Recorrido eliminado exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Recorrido no encontrado',
-        status: 'failed',
-      })
+
+      return jsonResponse(response, 200, null, 'Recorrido eliminado exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Recorrido no encontrado', false)
     }
   }
 }

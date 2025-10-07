@@ -2,110 +2,97 @@ import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Route from 'App/Models/Route'
 import CreateRouteValidator from 'App/Validators/Routes/CreateRouteValidator'
 import UpdateRouteValidator from 'App/Validators/Routes/UpdateRouteValidator'
+import { jsonResponse } from 'App/Helpers/ResponseHelper'
+import { getUser, isAdminOrMonitor } from 'App/Helpers/AuthHelper'
 
 export default class RoutesController {
-  // Obtener todos los routes
-  public async index({ response }: HttpContextContract) {
+  // Consulta base con preloads
+  private baseQuery() {
+    return Route.query()
+      .preload('user')
+      .preload('startPlace')
+      .preload('endPlace')
+      .preload('runs')
+  }
+
+  // Obtener todas las rutas
+  public async index({ response, auth }: HttpContextContract) {
     try {
-      const routes = await Route.query()
-        .preload('user')
-        .preload('startPlace')
-        .preload('endPlace')
-        .preload('runs')
-      return response.status(200).json({
-        data: routes,
-        msg: 'Rutas obtenidas exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(500).json({
-        data: null,
-        msg: e.message || 'Error al obtener rutas',
-        status: 'failed',
-      })
+      const user = await getUser(auth)  // <-- usar helper externo
+      const query = this.baseQuery()
+      if (!isAdminOrMonitor(user)) query.where('user_id', user.id) // <-- helper externo
+
+      const routes = await query
+      return jsonResponse(response, 200, routes, 'Rutas obtenidas exitosamente')
+    } catch (e: any) {
+      const status = e.name === 'AuthenticationException' ? 401 : 500
+      return jsonResponse(response, status, null, e.message || 'Error al obtener rutas', false)
     }
   }
 
-  // Crear una nueva route
-  public async store({ request, response }: HttpContextContract) {
+  // Crear una nueva ruta
+  public async store({ request, response, auth }: HttpContextContract) {
     try {
+      const user = await getUser(auth)
       const data = await request.validate(CreateRouteValidator)
+
+      if (!isAdminOrMonitor(user)) data.userId = user.id
+
       const route = await Route.create(data)
-      return response.status(201).json({
-        data: route,
-        msg: 'Ruta creada exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al crear ruta',
-        status: 'failed',
-      })
+      return jsonResponse(response, 201, route, 'Ruta creada exitosamente')
+    } catch (e: any) {
+      if (e.messages) return jsonResponse(response, 422, null, e.messages, false)
+      return jsonResponse(response, 400, null, e.message || 'Error al crear ruta', false)
     }
   }
 
-  // Mostrar una route específica
-  public async show({ params, response }: HttpContextContract) {
+  // Mostrar una ruta específica
+  public async show({ params, response, auth }: HttpContextContract) {
     try {
-      const route = await Route.query()
-        .where('id', params.id)
-        .preload('user')
-        .preload('startPlace')
-        .preload('endPlace')
-        .preload('runs')
-        .firstOrFail()
-      return response.status(200).json({
-        data: route,
-        msg: 'Ruta obtenida exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Ruta no encontrada',
-        status: 'failed',
-      })
+      const user = await getUser(auth)
+      const query = this.baseQuery().where('id', params.id)
+      if (!isAdminOrMonitor(user)) query.where('user_id', user.id)
+
+      const route = await query.firstOrFail()
+      return jsonResponse(response, 200, route, 'Ruta obtenida exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Ruta no encontrada', false)
     }
   }
 
-  // Actualizar una route
-  public async update({ params, request, response }: HttpContextContract) {
+  // Actualizar una ruta
+  public async update({ params, request, response, auth }: HttpContextContract) {
     try {
+      const user = await getUser(auth)
       const data = await request.validate(UpdateRouteValidator)
-      const route = await Route.findOrFail(params.id)
+
+      const query = Route.query().where('id', params.id)
+      if (!isAdminOrMonitor(user)) query.where('user_id', user.id)
+
+      const route = await query.firstOrFail()
       route.merge(data)
       await route.save()
-      return response.status(200).json({
-        data: route,
-        msg: 'Ruta actualizada exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al actualizar ruta',
-        status: 'failed',
-      })
+
+      return jsonResponse(response, 200, route, 'Ruta actualizada exitosamente')
+    } catch (e: any) {
+      if (e.messages) return jsonResponse(response, 422, null, e.messages, false)
+      return jsonResponse(response, 400, null, e.message || 'Error al actualizar ruta', false)
     }
   }
 
-  // Eliminar una route
-  public async destroy({ params, response }: HttpContextContract) {
+  // Eliminar una ruta
+  public async destroy({ params, response, auth }: HttpContextContract) {
     try {
-      const route = await Route.findOrFail(params.id)
+      const user = await getUser(auth)
+      const query = Route.query().where('id', params.id)
+      if (!isAdminOrMonitor(user)) query.where('user_id', user.id)
+
+      const route = await query.firstOrFail()
       await route.delete()
-      return response.status(200).json({
-        data: null,
-        msg: 'Ruta eliminada exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Ruta no encontrada',
-        status: 'failed',
-      })
+
+      return jsonResponse(response, 200, null, 'Ruta eliminada exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Ruta no encontrada', false)
     }
   }
 }

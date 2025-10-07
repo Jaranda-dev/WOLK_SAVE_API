@@ -5,7 +5,9 @@ export default class CreateRouteValidator {
   constructor(protected ctx: HttpContextContract) {}
 
   public schema = schema.create({
-    userId: schema.number([rules.exists({ table: "users", column: "id" })]),
+    userId: schema.number.optional([
+      rules.exists({ table: 'users', column: 'id' })
+    ]),
     startPlaceId: schema.number([
       rules.exists({ table: "places", column: "id" }),
     ]),

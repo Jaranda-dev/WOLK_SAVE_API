@@ -2,23 +2,16 @@ import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Evidence from 'App/Models/Evidence'
 import CreateEvidenceValidator from 'App/Validators/Evidences/CreateEvidenceValidator'
 import UpdateEvidenceValidator from 'App/Validators/Evidences/UpdateEvidenceValidator'
+import { jsonResponse } from 'App/Helpers/ResponseHelper'
 
 export default class EvidencesController {
   // Obtener todas las evidencias
   public async index({ response }: HttpContextContract) {
     try {
       const evidences = await Evidence.query().preload('report')
-      return response.status(200).json({
-        data: evidences,
-        msg: 'Evidencias obtenidas exitosamente',
-        status: 'success',
-      })
+      return jsonResponse(response, 200, evidences, 'Evidencias obtenidas exitosamente')
     } catch (e) {
-      return response.status(500).json({
-        data: null,
-        msg: e.message || 'Error al obtener evidencias',
-        status: 'failed',
-      })
+      return jsonResponse(response, 500, null, e.message || 'Error al obtener evidencias', false)
     }
   }
 
@@ -27,17 +20,13 @@ export default class EvidencesController {
     try {
       const data = await request.validate(CreateEvidenceValidator)
       const evidence = await Evidence.create(data)
-      return response.status(201).json({
-        data: evidence,
-        msg: 'Evidencia creada exitosamente',
-        status: 'success',
-      })
+      return jsonResponse(response, 201, evidence, 'Evidencia creada exitosamente')
     } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al crear evidencia',
-        status: 'failed',
-      })
+      if (e.messages) {
+        return jsonResponse(response, 422, null, e.messages, false)
+      }
+
+      return jsonResponse(response, 400, null, e.message || 'Error al crear evidencia', false)
     }
   }
 
@@ -45,17 +34,9 @@ export default class EvidencesController {
   public async show({ params, response }: HttpContextContract) {
     try {
       const evidence = await Evidence.query().where('id', params.id).preload('report').firstOrFail()
-      return response.status(200).json({
-        data: evidence,
-        msg: 'Evidencia obtenida exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Evidencia no encontrada',
-        status: 'failed',
-      })
+      return jsonResponse(response, 200, evidence, 'Evidencia obtenida exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Evidencia no encontrada', false)
     }
   }
 
@@ -66,17 +47,13 @@ export default class EvidencesController {
       const evidence = await Evidence.findOrFail(params.id)
       evidence.merge(data)
       await evidence.save()
-      return response.status(200).json({
-        data: evidence,
-        msg: 'Evidencia actualizada exitosamente',
-        status: 'success',
-      })
+      return jsonResponse(response, 200, evidence, 'Evidencia actualizada exitosamente')
     } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al actualizar evidencia',
-        status: 'failed',
-      })
+      if (e.messages) {
+        return jsonResponse(response, 422, null, e.messages, false)
+      }
+
+      return jsonResponse(response, 400, null, e.message || 'Error al actualizar evidencia', false)
     }
   }
 
@@ -85,17 +62,9 @@ export default class EvidencesController {
     try {
       const evidence = await Evidence.findOrFail(params.id)
       await evidence.delete()
-      return response.status(200).json({
-        data: null,
-        msg: 'Evidencia eliminada exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Evidencia no encontrada',
-        status: 'failed',
-      })
+      return jsonResponse(response, 200, null, 'Evidencia eliminada exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Evidencia no encontrada', false)
     }
   }
 }

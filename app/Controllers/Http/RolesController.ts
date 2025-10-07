@@ -2,23 +2,16 @@ import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Role from 'App/Models/Role'
 import CreateRoleValidator from 'App/Validators/Roles/CreateRoleValidator'
 import UpdateRoleValidator from 'App/Validators/Roles/UpdateRoleValidator'
+import { jsonResponse } from 'App/Helpers/ResponseHelper'
 
 export default class RolesController {
   // Obtener todos los roles
   public async index({ response }: HttpContextContract) {
     try {
       const roles = await Role.query().preload('users')
-      return response.status(200).json({
-        data: roles,
-        msg: 'Roles obtenidos exitosamente',
-        status: 'success',
-      })
+      return jsonResponse(response, 200, roles, 'Roles obtenidos exitosamente')
     } catch (e) {
-      return response.status(500).json({
-        data: null,
-        msg: e.message || 'Error al obtener roles',
-        status: 'failed',
-      })
+      return jsonResponse(response, 500, null, e.message || 'Error al obtener roles', false)
     }
   }
 
@@ -27,17 +20,12 @@ export default class RolesController {
     try {
       const data = await request.validate(CreateRoleValidator)
       const role = await Role.create(data)
-      return response.status(201).json({
-        data: role,
-        msg: 'Rol creado exitosamente',
-        status: 'success',
-      })
+      return jsonResponse(response, 201, role, 'Rol creado exitosamente')
     } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al crear rol',
-        status: 'failed',
-      })
+      if (e.messages) {
+        return jsonResponse(response, 422, null, e.messages, false)
+      }
+      return jsonResponse(response, 400, null, e.message || 'Error al crear rol', false)
     }
   }
 
@@ -48,17 +36,9 @@ export default class RolesController {
         .where('id', params.id)
         .preload('users')
         .firstOrFail()
-      return response.status(200).json({
-        data: role,
-        msg: 'Rol obtenido exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Rol no encontrado',
-        status: 'failed',
-      })
+      return jsonResponse(response, 200, role, 'Rol obtenido exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Rol no encontrado', false)
     }
   }
 
@@ -69,17 +49,12 @@ export default class RolesController {
       const role = await Role.findOrFail(params.id)
       role.merge(data)
       await role.save()
-      return response.status(200).json({
-        data: role,
-        msg: 'Rol actualizado exitosamente',
-        status: 'success',
-      })
+      return jsonResponse(response, 200, role, 'Rol actualizado exitosamente')
     } catch (e) {
-      return response.status(400).json({
-        data: null,
-        msg: e.messages || e.message || 'Error al actualizar rol',
-        status: 'failed',
-      })
+      if (e.messages) {
+        return jsonResponse(response, 422, null, e.messages, false)
+      }
+      return jsonResponse(response, 400, null, e.message || 'Error al actualizar rol', false)
     }
   }
 
@@ -88,17 +63,9 @@ export default class RolesController {
     try {
       const role = await Role.findOrFail(params.id)
       await role.delete()
-      return response.status(200).json({
-        data: null,
-        msg: 'Rol eliminado exitosamente',
-        status: 'success',
-      })
-    } catch (e) {
-      return response.status(404).json({
-        data: null,
-        msg: 'Rol no encontrado',
-        status: 'failed',
-      })
+      return jsonResponse(response, 200, null, 'Rol eliminado exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Rol no encontrado', false)
     }
   }
 }
