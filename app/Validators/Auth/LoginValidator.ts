@@ -10,14 +10,9 @@ export default class LoginValidator{
       rules.maxLength(255),
     ]),
     password: schema.string({}, [
-      rules.minLength(6),
+      rules.minLength(8),
       rules.maxLength(180),
-    ]),
-    // Para registro, opcionalmente nombre o rol
-    name: schema.string.optional({ trim: true }, [
-      rules.maxLength(255),
-    ]),
-    roleId: schema.number.optional(),
+    ])
   })
   
   public messages: CustomMessages = {}

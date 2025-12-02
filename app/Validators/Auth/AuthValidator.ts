@@ -11,7 +11,7 @@ export default class AuthValidator {
       rules.unique({ table: 'users', column: 'email' })
     ]),
     password: schema.string({}, [
-      rules.minLength(6),
+      rules.minLength(8),
       rules.maxLength(180),
     ]),
     // Para registro, opcionalmente nombre o rol

@@ -16,7 +16,7 @@ const corsConfig: CorsConfig = {
   */
   // Especifica los orígenes permitidos.
   // Puedes agregar más URLs al array si es necesario (ej. tu dominio en producción)
-  origin: ['https://vkf1xfcn-4200.usw3.devtunnels.ms'],
+  origin: ['http://localhost:8100','https://vkf1xfcn-8100.usw3.devtunnels.ms'],
 
   /*
   |--------------------------------------------------------------------------
