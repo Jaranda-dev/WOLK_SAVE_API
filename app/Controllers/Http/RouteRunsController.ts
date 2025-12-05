@@ -13,7 +13,7 @@ export default class RouteRunsController {
     return RouteRun.query()
       .preload('route', (r) => r.preload('startPlace').preload('endPlace'))
       .preload('user')
-      .preload('incidents')
+      .preload('incidents',(r) => r.preload('evidences'))
   }
 
   // Obtener todos los recorridos

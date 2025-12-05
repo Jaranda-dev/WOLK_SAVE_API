@@ -3,6 +3,10 @@ import Evidence from 'App/Models/Evidence'
 import CreateEvidenceValidator from 'App/Validators/Evidences/CreateEvidenceValidator'
 import UpdateEvidenceValidator from 'App/Validators/Evidences/UpdateEvidenceValidator'
 import { jsonResponse } from 'App/Helpers/ResponseHelper'
+import Drive from '@ioc:Adonis/Core/Drive'
+import { basename } from 'path'
+import Application from '@ioc:Adonis/Core/Application'
+import fs from 'fs'
 
 export default class EvidencesController {
   // Obtener todas las evidencias
@@ -63,6 +67,53 @@ export default class EvidencesController {
       const evidence = await Evidence.findOrFail(params.id)
       await evidence.delete()
       return jsonResponse(response, 200, null, 'Evidencia eliminada exitosamente')
+    } catch {
+      return jsonResponse(response, 404, null, 'Evidencia no encontrada', false)
+    }
+  }
+
+  public async getEvidence({ params, response }: HttpContextContract) {
+    try {
+      const evidence = await Evidence.findOrFail(params.id)
+      console.log('public/'+evidence.path)
+      // evidence.path should be the stored path relative to drive root
+      // Primero intentar con Drive (ruta relativa al disco)
+      let exists = await Drive.exists(evidence.path)
+      console.log('[Evidence] checking Drive.exists for', evidence.path, '=>', exists)
+      const filename = evidence.fileName || basename(evidence.path)
+      const contentType = evidence.fileType || 'application/octet-stream'
+
+      if (exists) {
+        response.header('Content-Type', contentType)
+        response.header('Content-Disposition', `attachment; filename="${filename}"`)
+        const stream = await Drive.getStream(evidence.path)
+        return response.stream(stream)
+      }
+
+      // Fallbacks: checar varias ubicaciones bajo public/ donde puedan estar los archivos
+      const candidates = [] as string[]
+      // If path already includes uploads prefix, this will point to public/uploads/...
+      candidates.push(Application.publicPath(evidence.path))
+      // If path is stored as relative 'incidents/..', check public/uploads/incidents/...
+      candidates.push(Application.publicPath(`uploads/${evidence.path}`))
+      // Also check public/<path-without-leading-uploads> just in case
+      candidates.push(Application.publicPath(evidence.path.replace(/^uploads\//, '')))
+
+      console.log('[Evidence] fallback candidates:', candidates)
+      for (const p of candidates) {
+        try {
+          console.log('[Evidence] checking fs.existsSync for', p)
+          if (fs.existsSync(p)) {
+            response.header('Content-Type', contentType)
+            response.header('Content-Disposition', `attachment; filename="${filename}"`)
+            return response.download(p)
+          }
+        } catch (err) {
+          // ignore and continue
+        }
+      }
+
+      return jsonResponse(response, 404, null, 'Archivo no encontrado en el almacenamiento', false)
     } catch {
       return jsonResponse(response, 404, null, 'Evidencia no encontrada', false)
     }

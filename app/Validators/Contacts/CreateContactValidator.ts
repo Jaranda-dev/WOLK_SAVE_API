@@ -8,10 +8,7 @@ export default class CreateContactValidator {
     phone: schema.string.optional({}, [
       rules.regex(/^[0-9]{10}$/), // solo 10 dígitos
     ]),
-    email: schema.string.optional({}, [
-      rules.email(),
-      rules.unique({ table: "contacts", column: "email" }),
-    ]),
+    email: schema.string.optional({},[rules.email()]),
     name: schema.string({}, [rules.minLength(3)]),
     direction: schema.string.optional({}, [rules.maxLength(255)]),
     userId: schema.number.optional([

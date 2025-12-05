@@ -6,12 +6,20 @@ import { jsonResponse } from 'App/Helpers/ResponseHelper'
 
 export default class PlacesController {
   // Obtener todos los lugares
-  public async index({ response }: HttpContextContract) {
+  public async index({ request, response }: HttpContextContract) {
     try {
-      const places = await Place.query()
-        .preload('incidents')
+      // read optional query param `type` (e.g. ?type=incident)
+      const type = request.input('type')
+
+      const query = Place.query()
+        .preload('incidents',(rr) => rr.preload('incidentType'))
         .preload('startRoutes')
         .preload('endRoutes')
+
+      if (type) {
+        query.where('type',type)
+      }
+      const places = await query
 
       return jsonResponse(response, 200, places, 'Lugares obtenidos exitosamente')
     } catch (e) {

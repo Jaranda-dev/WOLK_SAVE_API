@@ -6,8 +6,17 @@ export default class extends BaseSchema {
   public async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.bigIncrements('id').primary()
-      table.dateTime("date").notNullable();
+      table.dateTime("date").notNullable()
+      // Tipo/severidad del incidente
+      table.enum('type', ['sin_riesgo', 'molestias', 'peligroso', 'muy_peligroso']).defaultTo('sin_riesgo')
+      // Estado del incidente: en revisión o revisado
+      table.enum('status', ['revision', 'revisado']).defaultTo('revision')
       table.text('description').nullable()
+      table
+        .bigInteger("type_incident_id")
+        .unsigned()
+        .references("incident_types.id")
+        .onDelete("CASCADE");
       table
         .bigInteger("place_id")
         .unsigned()

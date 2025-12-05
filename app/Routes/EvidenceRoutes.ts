@@ -6,6 +6,7 @@ Route.group(() => {
   Route.post('/', 'EvidencesController.store')
   Route.put('/:id', 'EvidencesController.update')
   Route.delete('/:id', 'EvidencesController.destroy')
+  Route.get('/:id/file', 'EvidencesController.getEvidence')
 })
 .prefix('evidences')
 .middleware(['auth'])

@@ -12,6 +12,11 @@ export default class UpdateIncidentValidator {
     routeRunId: schema.number.optional([
       rules.exists({ table: 'route_runs', column: 'id' })
     ]),
+     status:schema.enum.optional(['revision', 'revisado']),
+    type:schema.enum.optional(['sin_riesgo', 'molestias', 'peligroso', 'muy_peligroso']),
+    incidentTypeId:schema.number.optional([
+      rules.exists({ table: 'incident_types', column: 'id' })
+    ])
   })
   public messages: CustomMessages = {}
 }

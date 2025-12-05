@@ -2,6 +2,7 @@ import Route from '@ioc:Adonis/Core/Route'
 
 Route.group(() => {
   require('App/Routes/ContactRoutes')
+  require('App/Routes/IncidentTypeRoute')
   require('App/Routes/EvidenceRoutes')
   require('App/Routes/IncidentRoutes')
   require('App/Routes/PlaceRoutes')

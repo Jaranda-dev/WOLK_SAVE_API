@@ -11,9 +11,13 @@ export default class CreateIncidentValidator {
     ]),
     description: schema.string.optional(),
     lat:schema.number(),
-    lng:schema.number()
-    
-    
+    lng:schema.number(),
+    status:schema.enum.optional(['revision', 'revisado']),
+    type:schema.enum.optional(['sin_riesgo', 'molestias', 'peligroso', 'muy_peligroso']),
+    incidentTypeId:schema.number([
+      rules.exists({ table: 'incident_types', column: 'id' })
+    ]),
+    ubicacion:schema.string()
   });
   public messages: CustomMessages = {};
 }
