@@ -112,7 +112,7 @@ export default class RouteRunsController {
   }
 
     // Actualizar un recorrido
-  public async finishedRouterRun({ params, request, response, auth }: HttpContextContract) {
+  public async finishedRouterRun({ params, response, auth }: HttpContextContract) {
     try {
       const user = await getUser(auth)
 
