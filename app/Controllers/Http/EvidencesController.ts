@@ -8,7 +8,7 @@ export default class EvidencesController {
   // Obtener todas las evidencias
   public async index({ response }: HttpContextContract) {
     try {
-      const evidences = await Evidence.query().preload('report')
+      const evidences = await Evidence.query().preload('incident')
       return jsonResponse(response, 200, evidences, 'Evidencias obtenidas exitosamente')
     } catch (e) {
       return jsonResponse(response, 500, null, e.message || 'Error al obtener evidencias', false)
@@ -33,7 +33,7 @@ export default class EvidencesController {
   // Mostrar una evidencia específica
   public async show({ params, response }: HttpContextContract) {
     try {
-      const evidence = await Evidence.query().where('id', params.id).preload('report').firstOrFail()
+      const evidence = await Evidence.query().where('id', params.id).preload('incident').firstOrFail()
       return jsonResponse(response, 200, evidence, 'Evidencia obtenida exitosamente')
     } catch {
       return jsonResponse(response, 404, null, 'Evidencia no encontrada', false)

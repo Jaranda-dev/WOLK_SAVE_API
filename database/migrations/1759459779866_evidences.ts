@@ -6,9 +6,11 @@ export default class extends BaseSchema {
   public async up () {
     this.schema.createTable(this.tableName, (table) => {
       table.bigIncrements('id').primary()
-      table.enum('type', ['photo', 'audio']).notNullable()
+      table.string('file_name')
+      table.string('file_type')
+      table.integer('file_size').unsigned()
       table.string('path').notNullable()
-      table.bigInteger('report_id').unsigned().references('reports.id').onDelete('CASCADE')
+      table.bigInteger('incident_id').unsigned().references('incidents.id').onDelete('CASCADE')
       /**
        * Uses timestamptz for PostgreSQL and DATETIME2 for MSSQL
        */

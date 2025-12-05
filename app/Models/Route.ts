@@ -26,6 +26,9 @@ export default class Route extends BaseModel {
   @column()
   public endPlaceId: number
 
+  @column()
+  public name:string
+
   @belongsTo(() => User)
   public user: BelongsTo<typeof User>
 

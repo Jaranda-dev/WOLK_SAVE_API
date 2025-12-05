@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, belongsTo, BelongsTo } from '@ioc:Adonis/Lucid/Orm'
-import Report from './Report'
+import Incident from './Incident'
 import SoftDeletes from './Traits/SoftDeletes'
 
 export default class Evidence extends BaseModel  {
@@ -15,17 +15,23 @@ export default class Evidence extends BaseModel  {
   @column({ isPrimary: true })
   public id: number
 
+  @column({ columnName: 'file_type' })
+  public fileType: string
+
+  @column({ columnName: 'file_name' })
+  public fileName: string | null
+
   @column()
-  public type: 'photo' | 'audio'
+  public fileSize: number | null
 
   @column()
   public path: string
 
-  @column()
-  public reportId: number
+  @column({ columnName: 'incident_id' })
+  public incidentId: number
 
-  @belongsTo(() => Report)
-  public report: BelongsTo<typeof Report>
+  @belongsTo(() => Incident)
+  public incident: BelongsTo<typeof Incident>
 
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime

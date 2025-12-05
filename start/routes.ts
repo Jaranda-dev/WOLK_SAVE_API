@@ -5,7 +5,6 @@ Route.group(() => {
   require('App/Routes/EvidenceRoutes')
   require('App/Routes/IncidentRoutes')
   require('App/Routes/PlaceRoutes')
-  require('App/Routes/ReportRoutes')
   require('App/Routes/RoleRoutes')
   require('App/Routes/RouteRoutes')
   require('App/Routes/RouteRunRoutes')

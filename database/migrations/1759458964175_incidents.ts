@@ -7,6 +7,7 @@ export default class extends BaseSchema {
     this.schema.createTable(this.tableName, (table) => {
       table.bigIncrements('id').primary()
       table.dateTime("date").notNullable();
+      table.text('description').nullable()
       table
         .bigInteger("place_id")
         .unsigned()

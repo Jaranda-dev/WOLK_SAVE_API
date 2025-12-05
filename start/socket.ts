@@ -46,6 +46,16 @@ Ws.io.on('connection', (socket) => {
     const audioData = payload && (payload.audioData !== undefined ? payload.audioData : payload)
     Ws.io.to(`listen:${user.id}`).emit('audio-chunk-received', { fromUserId: user.id, audioData })
   })
+  // Forward location updates from a user to any admins/monitors listening to them
+  // payload: { lat: number, long: number, timestamp?: string }
+  socket.on('location-update', (payload) => {
+    
+    const user = (socket.data && (socket.data as any).user) || null
+    if (!user) return
+    const location = payload && payload.location !== undefined ? payload.location : payload
+    // Emit to listeners room for this user
+    Ws.io.to(`listen:${user.id}`).emit('location-update', { fromUserId: user.id, location })
+  })
     socket.on('disconnect', () => {
   })
 })

@@ -1,8 +1,8 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, belongsTo, BelongsTo, hasMany, HasMany } from '@ioc:Adonis/Lucid/Orm'
 import Place from './Place'
-import Report from './Report'
 import RouteRun from './RouteRun'
+import Evidence from './Evidence'
 import SoftDeletes from './Traits/SoftDeletes'
 
 export default class Incident extends BaseModel {
@@ -20,6 +20,9 @@ export default class Incident extends BaseModel {
   public date: DateTime
 
   @column()
+  public description: string
+
+  @column()
   public placeId: number
 
   @column()
@@ -31,8 +34,8 @@ export default class Incident extends BaseModel {
   @belongsTo(() => RouteRun)
   public routeRun: BelongsTo<typeof RouteRun>
 
-  @hasMany(() => Report)
-  public reports: HasMany<typeof Report>
+  @hasMany(() => Evidence)
+  public evidences: HasMany<typeof Evidence>
 
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime

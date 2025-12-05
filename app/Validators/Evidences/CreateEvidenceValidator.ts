@@ -5,10 +5,11 @@ export default class CreateEvidenceValidator {
   constructor(protected ctx: HttpContextContract) {}
 
   public schema = schema.create({
-    type: schema.enum(["photo", "audio"] as const),
+    // now evidences belong to incidents per migration
+    fileType: schema.string({}, [rules.minLength(1), rules.maxLength(50)]),
     path: schema.string({}, [rules.minLength(3), rules.maxLength(255)]),
-    reportId: schema.number([
-      rules.exists({ table: "reports", column: "id" }), // verificar que el report exista
+    incidentId: schema.number([
+      rules.exists({ table: 'incidents', column: 'id' }), // verificar que el incident exista
     ]),
   });
 

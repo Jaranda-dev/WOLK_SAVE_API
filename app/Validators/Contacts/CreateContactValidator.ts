@@ -14,7 +14,7 @@ export default class CreateContactValidator {
     ]),
     name: schema.string({}, [rules.minLength(3)]),
     direction: schema.string.optional({}, [rules.maxLength(255)]),
-    userId: schema.number([
+    userId: schema.number.optional([
       rules.exists({ table: "users", column: "id" }), // verificar que el usuario exista
     ]),
   });

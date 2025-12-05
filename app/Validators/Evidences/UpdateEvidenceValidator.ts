@@ -5,10 +5,10 @@ export default class UpdateEvidenceValidator {
   constructor(protected ctx: HttpContextContract) {}
 
   public schema = schema.create({
-    type: schema.enum.optional(['photo', 'audio'] as const),
+    fileType: schema.string.optional({}, [rules.minLength(1), rules.maxLength(50)]),
     path: schema.string.optional({}, [rules.minLength(3), rules.maxLength(255)]),
-    reportId: schema.number.optional([
-      rules.exists({ table: 'reports', column: 'id' })
+    incidentId: schema.number.optional([
+      rules.exists({ table: 'incidents', column: 'id' })
     ]),
   })
 

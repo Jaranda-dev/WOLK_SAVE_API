@@ -4,6 +4,7 @@ import CreateRouteValidator from 'App/Validators/Routes/CreateRouteValidator'
 import UpdateRouteValidator from 'App/Validators/Routes/UpdateRouteValidator'
 import { jsonResponse } from 'App/Helpers/ResponseHelper'
 import { getUser, isAdminOrMonitor } from 'App/Helpers/AuthHelper'
+import Place from 'App/Models/Place'
 
 export default class RoutesController {
   // Consulta base con preloads
@@ -38,7 +39,26 @@ export default class RoutesController {
 
       if (!isAdminOrMonitor(user)) data.userId = user.id
 
-      const route = await Route.create(data)
+      const placeStart = await Place.create({
+        name:data.origin,
+        lat:data.originLatLng.lat,
+        long:data.originLatLng.lng,
+        type:"routepoints"
+      })
+
+      const placeEnd = await Place.create({
+        name:data.destination,
+        lat:data.destinationLatLng.lat,
+        long:data.destinationLatLng.lng,
+        type:"routepoints"
+      })
+ 
+      const route = await Route.create({
+        userId:data.userId,
+        name:data.name,
+        endPlaceId:placeEnd.id,
+        startPlaceId:placeStart.id,
+      })
       return jsonResponse(response, 201, route, 'Ruta creada exitosamente')
     } catch (e: any) {
       if (e.messages) return jsonResponse(response, 422, null, e.messages, false)

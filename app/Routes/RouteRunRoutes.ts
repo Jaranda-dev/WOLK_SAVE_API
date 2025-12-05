@@ -5,6 +5,7 @@ Route.group(() => {
   Route.get('/:id', 'RouteRunsController.show')
   Route.post('/', 'RouteRunsController.store')
   Route.put('/:id', 'RouteRunsController.update')
+   Route.put('/:id/finished', 'RouteRunsController.finishedRouterRun')
   Route.delete('/:id', 'RouteRunsController.destroy')
 })
 .prefix('runroutes')
