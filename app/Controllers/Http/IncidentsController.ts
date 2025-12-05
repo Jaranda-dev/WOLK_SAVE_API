@@ -5,7 +5,6 @@ import { jsonResponse } from 'App/Helpers/ResponseHelper'
 import Evidence from "App/Models/Evidence"
 import { cuid } from "@ioc:Adonis/Core/Helpers"
 import Application from '@ioc:Adonis/Core/Application'
-import Drive from '@ioc:Adonis/Core/Drive'
 import Place from 'App/Models/Place'
 
 export default class IncidentsController {// Crear un nuevo incidente con archivos
@@ -73,11 +72,8 @@ export default class IncidentsController {// Crear un nuevo incidente con archiv
       // Cargar evidencias relacionadas
       await incident.load('evidences')
 
-      return response.created({
-        success: true,
-        message: 'Incidente creado exitosamente',
-        data: incident,
-      })
+      return jsonResponse(response, 201, incident, 'Recorridos obtenidos exitosamente')
+      
     } catch (e) {
       console.error('[Incident] Error al crear:', e.message)
 
@@ -155,12 +151,5 @@ export default class IncidentsController {// Crear un nuevo incidente con archiv
   private getFileExtension(fileName: string): string {
     const parts = fileName.split('.')
     return parts.length > 1 ? '.' + parts[parts.length - 1] : ''
-  }
-
-  private getEvidenceType(mimeType: string): 'photo' | 'audio' | 'video' | 'file' {
-    if (mimeType.startsWith('image/')) return 'photo'
-    if (mimeType.startsWith('audio/')) return 'audio'
-    if (mimeType.startsWith('video/')) return 'video'
-    return 'file'
   }
 }
