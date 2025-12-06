@@ -26,6 +26,9 @@ export default class User extends BaseModel {
   public roleId: number
 
   @column()
+  public status : boolean
+
+  @column()
   public email: string
 
   @column({ serializeAs: null })

@@ -6,15 +6,17 @@ export default class CreateUserValidator {
 
   public schema = schema.create({
     name: schema.string({}, [rules.minLength(3), rules.maxLength(255)]),
-    roleId: schema.number([
+    roleId: schema.number.optional([
       rules.exists({ table: 'roles', column: 'id' })
+    ]),
+    role: schema.string([
+      rules.exists({ table: 'roles', column: 'name' })
     ]),
     email: schema.string({}, [
       rules.email(),
       rules.unique({ table: 'users', column: 'email' })
     ]),
     password: schema.string({}, [rules.minLength(6)]),
-    rememberMeToken: schema.string.optional({}, [rules.maxLength(255)]),
   })
   public messages: CustomMessages = {}
 }

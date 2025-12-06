@@ -1,9 +1,11 @@
 import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
+import { DateTime } from 'luxon'
 import User from 'App/Models/User'
 import CreateUserValidator from 'App/Validators/Users/CreateUserValidator'
 import UpdateUserValidator from 'App/Validators/Users/UpdateUserValidator'
 import { jsonResponse } from 'App/Helpers/ResponseHelper'
 import { getUser, isAdminOrMonitor } from 'App/Helpers/AuthHelper'
+import Role from 'App/Models/Role'
 
 export default class UsersController {
   // Consulta base con preloads
@@ -16,31 +18,49 @@ export default class UsersController {
   }
 
   // Obtener todos los usuarios
-  public async index({ response, auth }: HttpContextContract) {
-    try {
-      const userAuth = await getUser(auth)
-
-      if (isAdminOrMonitor(userAuth)) {
-        const users = await this.baseQuery()
-          .whereNot('id', userAuth.id)
-        return jsonResponse(response, 200, users, 'Usuarios obtenidos exitosamente')
+public async index({ response, auth, request }: HttpContextContract) {
+  try {
+    const userAuth = await getUser(auth)
+    
+    if (isAdminOrMonitor(userAuth)) {
+      const role = request.input('role')
+      const includedeleted = request.input('includeDeleted')
+      const query = includedeleted 
+        ? User.withTrashed().preload('role').preload('contacts').preload('routes').preload('routeRuns').whereNot('id', userAuth.id)
+        : this.baseQuery().whereNot('id', userAuth.id)
+      
+      if (role) {
+        query.whereHas('role', (q) => q.where('name', role))
       }
-
-      const singleUser = await this.baseQuery()
-        .where('id', userAuth.id)
-        .firstOrFail()
-
-      return jsonResponse(response, 200, singleUser, 'Usuario obtenido exitosamente')
-    } catch (e: any) {
-      const status = e.name === 'AuthenticationException' ? 401 : 500
-      return jsonResponse(response, status, null, e.message || 'Error al obtener usuarios', false)
+      console.log(includedeleted)
+      if (!includedeleted) {
+        query.whereNull('deleted_at')
+      }
+      
+      const users = await query
+      return jsonResponse(response, 200, users, 'Usuarios obtenidos exitosamente')
     }
+
+    const singleUser = await this.baseQuery()
+      .where('id', userAuth.id)
+      .firstOrFail()
+
+    return jsonResponse(response, 200, singleUser, 'Usuario obtenido exitosamente')
+  } catch (e: any) {
+    const status = e.name === 'AuthenticationException' ? 401 : 500
+    return jsonResponse(response, status, null, e.message || 'Error al obtener usuarios', false)
   }
+}
 
   // Crear un nuevo usuario
   public async store({ request, response }: HttpContextContract) {
     try {
       const data = await request.validate(CreateUserValidator)
+      const role = await Role.findBy('name',data.role)
+      data.roleId = 3
+      if(role){
+        data.roleId = role?.id
+      }
       const user = await User.create(data)
       return jsonResponse(response, 201, user, 'Usuario creado exitosamente')
     } catch (e: any) {
@@ -71,12 +91,26 @@ export default class UsersController {
     try {
       const userAuth = await getUser(auth)
       const data = await request.validate(UpdateUserValidator)
+      const { role: roleName, deleted, ...payload } = data as any
 
       const userToUpdate = isAdminOrMonitor(userAuth)
-        ? await User.findOrFail(params.id)
+        ? await User.withTrashed().where('id', params.id).firstOrFail()
         : await User.findOrFail(userAuth.id)
 
-      userToUpdate.merge(data)
+      if (roleName) {
+        const role = await Role.findBy('name', roleName)
+        if (role) {
+          payload.roleId = role.id
+        }
+      }
+
+      if (deleted === true) {
+        payload.deletedAt = DateTime.now()
+      } else if (deleted === false) {
+        payload.deletedAt = null
+      }
+
+      userToUpdate.merge(payload)
       await userToUpdate.save()
 
       return jsonResponse(
@@ -88,6 +122,10 @@ export default class UsersController {
           : 'Tu perfil fue actualizado exitosamente'
       )
     } catch (e: any) {
+      console.log(e)
+      if (e.code === 'E_ROW_NOT_FOUND') {
+        return jsonResponse(response, 404, null, 'Usuario no encontrado', false)
+      }
       if (e.messages) return jsonResponse(response, 422, null, e.messages, false)
       return jsonResponse(response, 400, null, e.message || 'Error al actualizar usuario', false)
     }

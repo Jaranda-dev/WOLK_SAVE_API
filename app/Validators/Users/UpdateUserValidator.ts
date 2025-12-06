@@ -9,12 +9,18 @@ export default class UpdateUserValidator {
     roleId: schema.number.optional([
       rules.exists({ table: 'roles', column: 'id' })
     ]),
+    role: schema.string.optional([
+      rules.exists({ table: 'roles', column: 'name' })
+    ]),
+    status:schema.boolean.optional(),
     email: schema.string.optional({}, [
       rules.email(),
-      rules.unique({ table: 'users', column: 'email' })
+      rules.unique({ table: 'users', column: 'email', whereNot: { id: this.ctx.params.id } })
     ]),
     password: schema.string.optional({}, [rules.minLength(6)]),
     rememberMeToken: schema.string.optional({}, [rules.maxLength(255)]),
+    deletedAt:schema.date.optional(),
+    deleted:schema.boolean.optional()
   })
   public messages: CustomMessages = {}
 }
