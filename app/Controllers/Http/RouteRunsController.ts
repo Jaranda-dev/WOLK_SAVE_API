@@ -43,6 +43,28 @@ export default class RouteRunsController {
       // Si no es admin o monitoreador, asignar usuario
       if (!isAdminOrMonitor(user)) data.user_id = user.id
 
+      // Buscar y terminar todas las rutas iniciadas del usuario
+      const userId = data.user_id || user.id
+      const activeRuns = await RouteRun.query()
+        .where('user_id', userId)
+        .whereNotNull('startTime')
+        .whereNull('endTime')
+
+      for (const activeRun of activeRuns) {
+        activeRun.endTime = date
+        await activeRun.save()
+
+        // Emitir socket de finalización para cada ruta
+        try {
+          console.log('[Ws] emitting route-run-finished (auto-close)', { runId: activeRun.id, userId: activeRun.userId })
+          Ws.io.emit('route-run-finished', { run: activeRun })
+          Ws.io.to(`listen:${activeRun.userId}`).emit('route-run-finished', { run: activeRun })
+        } catch (err) {
+          console.log('[Ws] error emitting route-run-finished', err)
+        }
+      }
+
+      // Crear nueva ruta
       const run = await RouteRun.create(data)
       // Emit event globally and to any admins/monitors listening to this user
       try {
