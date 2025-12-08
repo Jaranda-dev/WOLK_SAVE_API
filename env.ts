@@ -27,15 +27,12 @@ export default Env.rules({
   MYSQL_PASSWORD: Env.schema.string.optional(),
   MYSQL_DB_NAME: Env.schema.string(),
 
-  // Email Configuration (optional)
-  MAIL_HOST: Env.schema.string.optional(),
-  MAIL_PORT: Env.schema.number.optional(),
-  MAIL_USER: Env.schema.string.optional(),
-  MAIL_PASSWORD: Env.schema.string.optional(),
+  // Email Configuration (Resend)
+  RESEND_API_KEY: Env.schema.string.optional(),
   MAIL_FROM_NAME: Env.schema.string.optional(),
   MAIL_FROM_EMAIL: Env.schema.string.optional(),
 
-    // Google reCAPTCHA v3
-    RECAPTCHA_SECRET: Env.schema.string.optional(),
+  // Google reCAPTCHA v3
+  RECAPTCHA_SECRET: Env.schema.string.optional(),
 });
 

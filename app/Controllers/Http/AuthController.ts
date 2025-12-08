@@ -39,7 +39,9 @@ export default class AuthController {
       await user.save()
 
       // Enviar código por email
-      await EmailService.sendVerificationCode(user.email, code, user.name)
+      console.log('[Auth] Enviando código de verificación por email...')
+      const emailSent = await EmailService.sendVerificationCode(user.email, code, user.name)
+      console.log('[Auth] Resultado del envío de email:', { success: emailSent, email: user.email })
 
       return jsonResponse(
         response,
@@ -57,8 +59,6 @@ export default class AuthController {
   public async login({ request, response, auth }: HttpContextContract) {
     try {
       const { email, password, recaptchaToken } = await request.validate(LoginValidator)
-
-      // Verificar reCAPTCHA
       const recaptchaOk = await RecaptchaService.verify(recaptchaToken)
       if (!recaptchaOk) {
         return jsonResponse(response, 400, null, 'Validación reCAPTCHA fallida', false)
@@ -77,7 +77,9 @@ export default class AuthController {
       await user.save()
 
       // Enviar código por email
-      await EmailService.sendVerificationCode(user.email, code, user.name)
+      console.log('[Auth] Enviando código de verificación por email (login)...')
+      const emailSent = await EmailService.sendVerificationCode(user.email, code, user.name)
+      console.log('[Auth] Resultado del envío de email (login):', { success: emailSent, email: user.email })
 
       return jsonResponse(
         response,
@@ -127,7 +129,9 @@ export default class AuthController {
       const token = await auth.use('api').login(user, { expiresIn: '7days' })
 
       // Enviar correo de bienvenida
-      await EmailService.sendWelcomeEmail(user.email, user.name)
+      console.log('[Auth] Enviando correo de bienvenida...')
+      const welcomeSent = await EmailService.sendWelcomeEmail(user.email, user.name)
+      console.log('[Auth] Resultado del envío de correo de bienvenida:', { success: welcomeSent, email: user.email })
 
       return jsonResponse(response, 200, { user, token }, 'Autenticación completada exitosamente')
     } catch (e: any) {
