@@ -6,6 +6,7 @@ export default class extends BaseSchema {
   public async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.bigIncrements('id').primary()
+      table.string('token_firebase')
       table.string('name').notNullable()
       table.bigInteger('role_id').unsigned().references('roles.id').onDelete('CASCADE')
       table.string('email', 255).notNullable().unique()

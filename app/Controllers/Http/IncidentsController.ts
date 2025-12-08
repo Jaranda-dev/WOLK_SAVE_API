@@ -8,6 +8,8 @@ import { cuid } from "@ioc:Adonis/Core/Helpers"
 import Application from '@ioc:Adonis/Core/Application'
 import Place from 'App/Models/Place'
 import { getUser, isAdminOrMonitor } from 'App/Helpers/AuthHelper'
+import User from 'App/Models/User'
+import FirebaseService from 'App/Services/FirebaseService'
 
 export default class IncidentsController {// Crear un nuevo incidente con archivos
   public async store({ request, response }: HttpContextContract) {
@@ -179,4 +181,58 @@ export default class IncidentsController {// Crear un nuevo incidente con archiv
     const parts = fileName.split('.')
     return parts.length > 1 ? '.' + parts[parts.length - 1] : ''
   }
+
+  // Notificar a todos los usuarios de un incidente
+  public async alertUsersIncident({ params, request, response }: HttpContextContract) {
+      try {
+        const incident = await Incident.findOrFail(params.id)
+        await incident.load('place')
+        
+        // Buscar todos los usuarios con roleId = 3 (monitores)
+        const users = await User.query()
+          .where('roleId', 3)
+          .select('id', 'name', 'email', 'tokenFirebase')
+
+        if (users.length === 0) {
+          return jsonResponse(response, 404, null, 'No hay usuarios con rol de monitor para notificar', false)
+        }
+
+        // Filtrar tokens válidos
+        const tokens = users
+          .filter(u => u.tokenFirebase)
+          .map(u => u.tokenFirebase)
+
+        if (tokens.length === 0) {
+          return jsonResponse(
+            response,
+            200,
+            { usersNotified: 0, users },
+            'No hay tokens de Firebase disponibles para enviar notificaciones',
+            true
+          )
+        }
+
+        // Enviar notificaciones push
+        await incident.load('incidentType')
+        const title = `Nuevo Incidente: ${incident.incidentType?.name || 'General'}`
+        const body = `${incident.description || 'Un nuevo incidente ha sido reportado'}`
+        const data: Record<string, string> = {
+          incidentId: incident.id.toString(),
+          placeId: incident.placeId?.toString() || ''
+        }
+
+        await FirebaseService.sendNotificationToMultiple(tokens, title, body, data)
+        console.log(`[Incident Alert] Notificaciones enviadas a ${tokens.length} monitores sobre incidente ${incident.id}`)
+
+        return jsonResponse(
+          response,
+          200,
+          { usersNotified: tokens.length, totalMonitors: users.length, users },
+          `Notificaciones push enviadas a ${tokens.length} monitores`
+        )
+      } catch (e: any) {
+        const status = e.code === 'E_ROW_NOT_FOUND' ? 404 : 500
+        return jsonResponse(response, status, null, e.message || 'Error al notificar usuarios', false)
+      }
+    }
 }

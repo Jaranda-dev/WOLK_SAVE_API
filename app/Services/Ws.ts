@@ -19,7 +19,7 @@ class Ws {
     this.booted = true
     this.io = new Server(AdonisServer.instance!, {
       cors: {
-        origin: 'https://vkf1xfcn-8100.usw3.devtunnels.ms',
+        origin: ['https://vkf1xfcn-8100.usw3.devtunnels.ms','http://localhost:8100'],
         methods: ['GET', 'POST'],
       },
     })
