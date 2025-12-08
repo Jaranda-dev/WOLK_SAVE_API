@@ -21,6 +21,10 @@ export default class User extends BaseModel {
 
   @column()
   public tokenFirebase:string
+
+   @column()
+  public code:string
+  
   @column()
   public name: string
 

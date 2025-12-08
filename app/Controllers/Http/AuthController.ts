@@ -2,16 +2,19 @@ import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import User from 'App/Models/User'
 import LoginValidator from 'App/Validators/Auth/LoginValidator'
 import RegisterValidator from 'App/Validators/Auth/RegisterValidator'
+import VerifyCodeValidator from 'App/Validators/Auth/VerifyCodeValidator'
 import { jsonResponse } from 'App/Helpers/ResponseHelper'
 import FirebaseService from 'App/Services/FirebaseService'
+import CodeService from 'App/Services/CodeService'
 
 export default class AuthController {
 
-  // Registro
-  public async register({ request, response, auth }: HttpContextContract) {
+  // Registro con 2FA
+  public async register({ request, response }: HttpContextContract) {
     try {
       const data = await request.validate(RegisterValidator)
 
+      // Crear usuario
       const user = await User.create({
         name: data.name,
         email: data.email,
@@ -19,27 +22,101 @@ export default class AuthController {
         roleId: 3,
       })
 
-      const token = await auth.use('api').login(user, { expiresIn: '7days' })
+      // Generar código
+      const code = CodeService.generateCode()
+      const encryptedCode = await CodeService.encryptCode(code)
 
-      return jsonResponse(response, 201, { user, token }, 'Usuario registrado correctamente')
-    } catch (e) {
+      // Guardar código encriptado en BD
+      user.code = encryptedCode
+      await user.save()
+
+      // TODO: Enviar código por email
+      console.log(`[2FA Register] Código para ${user.email}: ${code}`)
+
+      return jsonResponse(
+        response,
+        201,
+        { email: user.email, requiresCode: true },
+        'Usuario registrado. Verifica el código enviado a tu correo'
+      )
+    } catch (e: any) {
       if (e.messages) return jsonResponse(response, 422, null, e.messages, false)
       return jsonResponse(response, 400, null, e.message || 'Error al registrar el usuario', false)
     }
   }
 
-  // Login
-  public async login({ request, response, auth }: HttpContextContract) {
+  // Login con 2FA
+  public async login({ request, response ,auth}: HttpContextContract) {
     try {
       const { email, password } = await request.validate(LoginValidator)
 
+
+      // Validar contraseña
       const token = await auth.use('api').attempt(email, password, { expiresIn: '7days' })
       const user = auth.use('api').user!
+      console.log(token)
 
-      return jsonResponse(response, 200, { user, token }, 'Login exitoso')
-    } catch (e) {
+
+      // Generar código
+      const code = CodeService.generateCode()
+      const encryptedCode = await CodeService.encryptCode(code)
+
+      // Guardar código encriptado en BD
+      user.code = encryptedCode
+      await user.save()
+
+      // TODO: Enviar código por email
+      console.log(`[2FA Login] Código para ${user.email}: ${code}`)
+
+      return jsonResponse(
+        response,
+        200,
+        { email: user.email, requiresCode: true },
+        'Credenciales válidas. Verifica el código enviado a tu correo'
+      )
+    } catch (e: any) {
+      console.log(e)
+      if (e.code === 'E_ROW_NOT_FOUND') {
+        return jsonResponse(response, 400, null, 'Credenciales inválidas', false)
+      }
       if (e.messages) return jsonResponse(response, 422, null, e.messages, false)
       return jsonResponse(response, 400, null, 'Credenciales inválidas', false)
+    }
+  }
+
+  // Verificar código y generar token
+  public async verifyCode({ request, response, auth }: HttpContextContract) {
+    try {
+      const { email, code } = await request.validate(VerifyCodeValidator)
+
+      // Buscar usuario
+      const user = await User.findByOrFail('email', email)
+
+      // Validar que tenga código
+      if (!user.code) {
+        return jsonResponse(response, 400, null, 'No hay código pendiente de verificación', false)
+      }
+
+      // Verificar código
+      const isCodeValid = await CodeService.verifyCode(code, user.code)
+      if (!isCodeValid) {
+        return jsonResponse(response, 400, null, 'Código incorrecto', false)
+      }
+
+      // Limpiar código
+      user.code = ''
+      await user.save()
+
+      // Generar token
+      const token = await auth.use('api').login(user, { expiresIn: '7days' })
+
+      return jsonResponse(response, 200, { user, token }, 'Autenticación completada exitosamente')
+    } catch (e: any) {
+      if (e.code === 'E_ROW_NOT_FOUND') {
+        return jsonResponse(response, 404, null, 'Usuario no encontrado', false)
+      }
+      if (e.messages) return jsonResponse(response, 422, null, e.messages, false)
+      return jsonResponse(response, 400, null, e.message || 'Error al verificar código', false)
     }
   }
 
@@ -91,7 +168,6 @@ export default class AuthController {
       if (!user.tokenFirebase) {
         return jsonResponse(response, 400, null, 'Usuario sin token FCM', false)
       }
-      
 
       const result = await FirebaseService.sendNotification(
         user.tokenFirebase,
