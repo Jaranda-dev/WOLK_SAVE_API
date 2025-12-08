@@ -6,6 +6,7 @@ import VerifyCodeValidator from 'App/Validators/Auth/VerifyCodeValidator'
 import { jsonResponse } from 'App/Helpers/ResponseHelper'
 import FirebaseService from 'App/Services/FirebaseService'
 import CodeService from 'App/Services/CodeService'
+import EmailService from 'App/Services/EmailService'
 
 export default class AuthController {
 
@@ -30,8 +31,8 @@ export default class AuthController {
       user.code = encryptedCode
       await user.save()
 
-      // TODO: Enviar código por email
-      console.log(`[2FA Register] Código para ${user.email}: ${code}`)
+      // Enviar código por email
+      await EmailService.sendVerificationCode(user.email, code, user.name)
 
       return jsonResponse(
         response,
@@ -46,16 +47,13 @@ export default class AuthController {
   }
 
   // Login con 2FA
-  public async login({ request, response ,auth}: HttpContextContract) {
+  public async login({ request, response, auth }: HttpContextContract) {
     try {
       const { email, password } = await request.validate(LoginValidator)
 
-
-      // Validar contraseña
+      // Validar credenciales
       const token = await auth.use('api').attempt(email, password, { expiresIn: '7days' })
       const user = auth.use('api').user!
-      console.log(token)
-
 
       // Generar código
       const code = CodeService.generateCode()
@@ -65,8 +63,8 @@ export default class AuthController {
       user.code = encryptedCode
       await user.save()
 
-      // TODO: Enviar código por email
-      console.log(`[2FA Login] Código para ${user.email}: ${code}`)
+      // Enviar código por email
+      await EmailService.sendVerificationCode(user.email, code, user.name)
 
       return jsonResponse(
         response,
@@ -75,7 +73,6 @@ export default class AuthController {
         'Credenciales válidas. Verifica el código enviado a tu correo'
       )
     } catch (e: any) {
-      console.log(e)
       if (e.code === 'E_ROW_NOT_FOUND') {
         return jsonResponse(response, 400, null, 'Credenciales inválidas', false)
       }
@@ -109,6 +106,9 @@ export default class AuthController {
 
       // Generar token
       const token = await auth.use('api').login(user, { expiresIn: '7days' })
+
+      // Enviar correo de bienvenida
+      await EmailService.sendWelcomeEmail(user.email, user.name)
 
       return jsonResponse(response, 200, { user, token }, 'Autenticación completada exitosamente')
     } catch (e: any) {
