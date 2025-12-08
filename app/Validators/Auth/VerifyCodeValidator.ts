@@ -7,6 +7,7 @@ export default class VerifyCodeValidator {
   public schema = schema.create({
     email: schema.string({}, [rules.email()]),
     code: schema.string({}, [rules.minLength(6), rules.maxLength(6)]),
+    recaptchaToken:schema.string()
   })
 
   public messages: CustomMessages = {

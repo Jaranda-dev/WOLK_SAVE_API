@@ -34,5 +34,8 @@ export default Env.rules({
   MAIL_PASSWORD: Env.schema.string.optional(),
   MAIL_FROM_NAME: Env.schema.string.optional(),
   MAIL_FROM_EMAIL: Env.schema.string.optional(),
+
+    // Google reCAPTCHA v3
+    RECAPTCHA_SECRET: Env.schema.string.optional(),
 });
 

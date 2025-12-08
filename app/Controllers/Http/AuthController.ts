@@ -7,6 +7,7 @@ import { jsonResponse } from 'App/Helpers/ResponseHelper'
 import FirebaseService from 'App/Services/FirebaseService'
 import CodeService from 'App/Services/CodeService'
 import EmailService from 'App/Services/EmailService'
+import RecaptchaService from 'App/Services/RecaptchaService'
 
 export default class AuthController {
 
@@ -14,6 +15,12 @@ export default class AuthController {
   public async register({ request, response }: HttpContextContract) {
     try {
       const data = await request.validate(RegisterValidator)
+
+      // Verificar reCAPTCHA
+      const recaptchaOk = await RecaptchaService.verify(data.recaptchaToken)
+      if (!recaptchaOk) {
+        return jsonResponse(response, 400, null, 'Validación reCAPTCHA fallida', false)
+      }
 
       // Crear usuario
       const user = await User.create({
@@ -49,7 +56,13 @@ export default class AuthController {
   // Login con 2FA
   public async login({ request, response, auth }: HttpContextContract) {
     try {
-      const { email, password } = await request.validate(LoginValidator)
+      const { email, password, recaptchaToken } = await request.validate(LoginValidator)
+
+      // Verificar reCAPTCHA
+      const recaptchaOk = await RecaptchaService.verify(recaptchaToken)
+      if (!recaptchaOk) {
+        return jsonResponse(response, 400, null, 'Validación reCAPTCHA fallida', false)
+      }
 
       // Validar credenciales
       const token = await auth.use('api').attempt(email, password, { expiresIn: '7days' })
@@ -84,7 +97,13 @@ export default class AuthController {
   // Verificar código y generar token
   public async verifyCode({ request, response, auth }: HttpContextContract) {
     try {
-      const { email, code } = await request.validate(VerifyCodeValidator)
+      const { email, code, recaptchaToken } = await request.validate(VerifyCodeValidator)
+
+      // Verificar reCAPTCHA
+      const recaptchaOk = await RecaptchaService.verify(recaptchaToken)
+      if (!recaptchaOk) {
+        return jsonResponse(response, 400, null, 'Validación reCAPTCHA fallida', false)
+      }
 
       // Buscar usuario
       const user = await User.findByOrFail('email', email)

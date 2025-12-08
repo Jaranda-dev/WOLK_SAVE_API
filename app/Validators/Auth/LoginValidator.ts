@@ -12,7 +12,8 @@ export default class LoginValidator{
     password: schema.string({}, [
       rules.minLength(8),
       rules.maxLength(180),
-    ])
+    ]),
+    recaptchaToken:schema.string()
   })
   
   public messages: CustomMessages = {}

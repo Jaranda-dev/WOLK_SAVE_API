@@ -22,6 +22,7 @@ export default class RegisterValidator {
       rules.maxLength(255),
     ]),
     roleId: schema.number.optional(),
+    recaptchaToken:schema.string()
   })
   
   public messages: CustomMessages = {}
