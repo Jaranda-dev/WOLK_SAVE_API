@@ -128,11 +128,6 @@ export default class AuthController {
       // Generar token
       const token = await auth.use('api').login(user, { expiresIn: '7days' })
 
-      // Enviar correo de bienvenida
-      console.log('[Auth] Enviando correo de bienvenida...')
-      const welcomeSent = await EmailService.sendWelcomeEmail(user.email, user.name)
-      console.log('[Auth] Resultado del envío de correo de bienvenida:', { success: welcomeSent, email: user.email })
-
       return jsonResponse(response, 200, { user, token }, 'Autenticación completada exitosamente')
     } catch (e: any) {
       if (e.code === 'E_ROW_NOT_FOUND') {
